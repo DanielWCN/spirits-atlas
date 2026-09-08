@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="IWwECaajnWU9gCn7LOqU6R">
+<head data-page-node-id="FCM9UTnZ56kWjo47h7BJh2">
+<meta charset="UTF-8" data-page-node-id="jBlyZ5bKJedj25M8hYsTcx">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="FsZC5xCluIevXBwuPrpADh">
+<title>Spirits Atlas · 酒类高德地图</title>
+<meta name="description" content="3D 科幻地球仪上的全球酒类产地导航 —— 接入 Open Brewery DB、WhiskyyDB、Open Food Facts、sampleapis Wines、TheCocktailDB 真实数据 + 产区百科" data-page-node-id="tU2Ey6YOgPE84MZX918zST">
+<link rel="stylesheet" href="css/style.css" data-page-node-id="W81b4jWHMX1cbEVkX1QgUL">
+<!-- 内联 favicon：避免 /favicon.ico 404 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b1a33'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%232b6cff' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23ffd479'/%3E%3C/svg%3E">
+</head>
+<body data-page-node-id="1QA8ZFqLcwoircEuaiH9m8">
+
+<div id="app" data-page-node-id="YGCO2uxNYWnfSV06IFz6HW">
+
+  <!-- ==================== 左侧：信息中枢 ==================== -->
+  <aside id="panel" data-page-node-id="CCLkh6XpgqdtyxgoqIBwox">
+    <header class="panel-head" data-page-node-id="Gx4HQEGDDp36AIYdMjlFYr">
+      <div id="mobileDrawerHandle" title="点击展开/收起"></div>
+      <div class="brand" data-page-node-id="4GvKPF5XUONybah89GACRX">
+        <span class="logo" data-page-node-id="dYGZ44MGVCSL3zn9ksa98x">🌐</span>
+        <div data-page-node-id="burLydWFUzfVAn6kFA4Cjf">
+          <h1 data-page-node-id="dNb38n7n7yhrAZGCWJtrhz">Spirits Atlas</h1>
+          <p data-page-node-id="AOUgjcSmbWjAvPFj7xMViB">酒类高德地图 · 3D 产地导航</p>
+        </div>
+      </div>
+      <div class="brand-sub" data-page-node-id="gFlZVkumrv2mFSIh4Y0iKO">拖拽旋转 · 滚轮缩放 · 点击产地标记聚焦 · 左右双向联动</div>
+    </header>
+
+    <!-- 品类快速筛选 -->
+    <nav id="catTabs" class="tabs" data-page-node-id="IMBcRDZX4uZBuKZzya8WXq"></nav>
+    <div id="quickFilter" class="quick-filter"></div>
+
+    <!-- 筛选与搜索 -->
+    <div class="filter-bar" data-page-node-id="ZGCsEkNlMZG8EChtDu7Nqc">
+      <div class="search-wrap" data-page-node-id="NeEzKAPWmJGL5YjUA5VksU">
+        <span class="s-ico" data-page-node-id="uGUUJ7FkglhBW37oIbkX6c">🔍</span>
+        <input id="searchInput" type="text" autocomplete="off" placeholder="搜索品牌 / 产地 / 风味 / 瓶身特征…" data-page-node-id="DCAYWGpqpPFLgcUzmg1apF">
+        <button id="clearBtn" class="icon-btn" title="清除筛选" data-page-node-id="OGtuAJQM4ALJRqjWJdjjfy">×</button>
+        <button id="camBtn" class="icon-btn" title="传图识酒" data-page-node-id="lhfOWshBlJGd3gpZeZEoKP">📷</button>
+        <div id="camPop" class="cam-pop" data-page-node-id="1XTrJJ72te437fMBIAaCVW"></div>
+      </div>
+      <div class="filter-row" data-page-node-id="gL9vRVF79GEUYmUxz7svbJ">
+        <select id="sortSelect" data-page-node-id="IHzt4ZU39Q2IThtKU7Hncl">
+          <option value="rating" data-page-node-id="hIPKQOQ2W8nC21medpKBKm">按推荐指数排序</option>
+          <option value="name" data-page-node-id="VMLI1CidmkQjgDxWUxrgPA">按名称排序</option>
+          <option value="origin" data-page-node-id="WS7eoyEwA8XXOQUMP1uTgv">按产地排序</option>
+        </select>
+        <span id="originChip" class="origin-chip" data-page-node-id="S00sc910XSCw2x12f7ySTL"><span data-page-node-id="EGlnZA3ThWTnx333YwyqFn"></span><button id="clearOrigin" title="取消产区过滤" data-page-node-id="CvVN1NtDZHm5UTqw6NdHNq">×</button></span>
+        <span class="count" data-page-node-id="7lOrBxDoW2DJEPyKF2sf5c"><b id="resultCount" data-page-node-id="O2g8sWmhWFF1JxU2RpGlMI">0</b> 款结果</span>
+      </div>
+    </div>
+
+    <!-- 动态知识卡：品类知识 / 产区百科（可滚动，不遮挡列表） -->
+    <div id="knowledge" data-page-node-id="0FCC8DF3eBxAAfP1kbUKi1"></div>
+
+    <!-- 热门产区快捷入口 -->
+    <div id="hotRegions" class="hot-regions" data-page-node-id="AfLDNXAGmmjoGsdJiukpv3"></div>
+
+    <!-- 结果列表（独立滚动区） -->
+    <div id="listWrap" data-page-node-id="HvQFCcBESoqv060c8XxjDm">
+      <ul id="list" class="list" data-page-node-id="R4zsExt91iyx8NjTQpQdl7"></ul>
+    </div>
+
+    <!-- 详情区：必须放在 #panel 之外。
+         #panel 有 backdrop-filter，会成为 position:fixed 的包含块，
+         导致详情浮层贴回 panel 左侧并盖住整个列表（用户反馈「展开后看不了下面的酒」）。 -->
+  </aside>
+
+  <!-- ==================== 右侧：3D 地球仪 ==================== -->
+  <main id="stage" data-page-node-id="h5UBE8Uc9mz0aWET1LvHuU">
+    <div id="globe" data-page-node-id="YlG5geADnokKRztXXeXYja"></div>
+
+    <div id="hudCount" class="hud-count" data-page-node-id="faGouHAwtW2RCQTHCsQpQe"></div>
+    <div class="hud-legend" id="hudLegend" data-page-node-id="HRbN8iwX9oQO4fsyQgjUMY"></div>
+    <div id="hudSources" class="hud-sources" data-page-node-id="CKnw3UBFhMDRHI91IfDIKj"></div>
+    <div class="hud-zoom" data-page-node-id="UmMttOntc3lFuptvSDboWg">
+      <button id="zoomIn" title="放大" data-page-node-id="u1Dj91TQXDGguQYiavuHDZ">＋</button>
+      <button id="zoomOut" title="缩小" data-page-node-id="QExWGk68wBem6cg3e3qsFw">－</button>
+      <button id="zoomReset" title="重置视角（清掉选中 + 退回默认）" data-page-node-id="kGGpvN6SeSzK3Sgj8irmmv">⟲</button>
+    </div>
+    <!-- 选中标记条：地球上有选中时浮现在顶部；点 × 清掉选中并退回默认视角 -->
+    <div id="selBar" class="sel-bar" hidden>
+      <span class="sel-bar-dot"></span>
+      <span class="sel-bar-text">已聚焦</span>
+      <button id="selClear" title="取消选中并退回默认">×</button>
+    </div>
+    <div class="hud-hint" data-page-node-id="IiAqBCpHA9BSmhCTD9wY1k">左键拖拽旋转 · 滚轮缩放 · 点击发光标记聚焦产地</div>
+    <div id="globeTip" class="globe-tip" data-page-node-id="FvSnxUotqemXqXR4tHepwE"></div>
+  </main>
+</div>
+
+<!-- 详情浮层：body 直接子元素，fixed 相对视口 → 浮在右侧地球区上方，左侧列表完全不受影响 -->
+<section id="detail" class="detail-wrap" data-page-node-id="r9nvSYsLgdkdZ0OfjmQs85"></section>
+
+<!-- ==================== 加载层 ==================== -->
+<div id="loading" class="loading" data-page-node-id="Af73W9kMutwoGP0NFnAgc3">
+  <div class="load-card" data-page-node-id="rYNUIQJZDW5PsOLNZm8fHu">
+    <h2 data-page-node-id="Immp3z02wU2c19iH9xLbMN">🛰 正在接入真实酒类数据源</h2>
+    <div id="loadList" class="load-list" data-page-node-id="jyHnk83St6NiRobhYyq0Fi"></div>
+    <p class="load-note" data-page-node-id="PNCknp0hI5zLI0qIU76lVm">数据来自 5 个公开开源数据源（Open Brewery DB / WhiskyyDB / Open Food Facts / sampleapis Wines / TheCocktailDB）+ 策展典型酒款库。任一数据源失败会自动降级，不影响其他功能。</p>
+  </div>
+</div>
+
+<div id="fatal" class="fatal" data-page-node-id="SYD8bV2PPftZmg2AEeQqBr"><div data-page-node-id="r8JoUpljjbYr1eYaOGsW5V"><h2 data-page-node-id="ZUl4d8e7GuXOg2CNpEmtKm">数据加载失败</h2><p data-page-node-id="d3afeQDFuLt87KS6MujLvj"></p></div></div>
+
+<!-- 内嵌地球贴图（dataURL，file:// 与离线环境同样可用） -->
+<script src="js/assets/textures.js"></script>
+<!-- Three.js（UMD 构建）：本地优先（离线/CDN 被墙也能跑），CDN 仅作兜底 -->
+<script src="js/vendor/three.min.js"></script>
+<script>
+// 本地文件缺失或加载失败时，依次回退到 CDN
+if (typeof THREE === 'undefined') {
+  document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"><\/script>');
+}
+if (typeof THREE === 'undefined') {
+  document.write('<script src="https://unpkg.com/three@0.157.0/build/three.min.js"><\/script>');
+}
+if (typeof THREE === 'undefined') {
+  document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+}
+</script>
+
+<!-- 数据层 → 视图层，逐层依赖 -->
+<script src="js/config.js"></script>
+<script src="js/geo.js"></script>
+<script src="js/knowledge.js"></script>
+<script src="js/regions.js"></script>
+<script src="js/bottles.js"></script>
+<script src="js/bottles_cn.js"></script>
+<script src="js/bottles_rated.js"></script>
+<script src="js/ratings.js"></script>
+<script src="js/api.js"></script>
+<script src="js/store.js"></script>
+<script src="js/globe.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

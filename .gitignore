@@ -1,0 +1,15 @@
+# 验证脚本、浏览器 profile、截图等临时产物（体积可达数百 MB，务必排除）
+_tmp/
+
+# WorkBuddy 内部记忆与状态文件
+.workbuddy/
+
+# 日志与系统垃圾
+*.log
+server.log
+edge*.log
+.DS_Store
+Thumbs.db
+
+# 依赖目录
+node_modules/

@@ -1,0 +1,17 @@
+# Render Blueprint：纯静态站点（无需构建、无服务器进程、不休眠）
+services:
+  - type: web
+    name: spirits-atlas
+    env: static
+    # 纯静态项目，不需要构建命令
+    buildCommand: ""
+    # 发布目录：仓库根目录（index.html 就在这里）
+    staticPublishPath: .
+    # 静态资源缓存 1 小时，加快二次访问
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=3600
+      - path: /js/*
+        name: Cache-Control
+        value: public, max-age=3600
