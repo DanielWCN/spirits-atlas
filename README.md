@@ -1,0 +1,2 @@
+# spirits-atlas
+
