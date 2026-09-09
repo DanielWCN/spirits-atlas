@@ -8,8 +8,9 @@
 
 ## 在线访问
 
-<!-- 部署到 Render 后，把下面的地址替换成实际链接，例如 https://spirits-atlas-a1b2.onrender.com -->
-**部署后填写**（见下方「部署」一节）
+**https://spirits-atlas.onrender.com**
+
+（Render 静态站点，首次访问冷启动约需 10–30 秒。）
 
 本地运行：直接用浏览器打开 `index.html` 即可，无需安装任何依赖、无需启动服务器。
 （地球贴图已内嵌为 base64，Three.js 已本地化到 `js/vendor/`，**断网也能正常显示**。）
