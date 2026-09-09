@@ -59,18 +59,21 @@ window.SA = window.SA || {};
       rt = setTimeout(function () { SA.globe.resize(); }, 120);
     });
 
-    /* ============ 移动端（≤600px）：全屏可刷的酒单 ============
-       心智模型：打开页面主要就是「刷酒」。
-       · 面板默认占 60% 屏（列表为主、顶部仍留 40% 地球可点）
-       · 在列表里往上一滑 → 面板平滑铺满整屏（100%），酒单全屏可刷
-       · 面板全屏后再下滑 → 先滚列表内容；滚到顶部继续下滑 → 退回地图态 60%
-       · 顶部把手：按住可上下拖（实时跟手），轻点 = 一键切换 60% ↔ 100%
+    /* ============ 移动端（≤600px）：三档酒单 / 地图 ============
+       心智模型：打开 = 刷酒为主，地图可随时让位/呼出。
+       MAP(12%) 纯地图态(酒单只露一小条，随时可拉起)
+       MIX(60%) 酒单+顶部留 40% 地球（默认）
+       FULL(100%) 酒单全屏可刷
+       手势：
+       · 列表里上滑 = 逐级放大直到全屏；往下拖 = 缩小
+       · 顶部把手：按住可上下拖（跟手），轻点 = MAP→MIX→FULL→MIX 循环
+       · 全屏态把列表滚到顶再下拉 → 收起
     */
     var isMobile = function () { return window.innerWidth <= 600; };
     var panel = document.getElementById('panel');
     var handle = document.getElementById('mobileDrawerHandle');
     var listWrap = document.getElementById('listWrap');
-    var LOW = 0.60, FULL = 1.0;          /* 地图态 60% ↔ 全屏酒单 */
+    var MAP = 0.12, MIX = 0.60, FULL = 1.0;
 
     function sheetH() { return panel ? panel.getBoundingClientRect().height : 0; }
     function setSheet(px) { if (panel) panel.style.height = Math.round(px) + 'px'; }
@@ -79,14 +82,12 @@ window.SA = window.SA || {};
       if (panel) {
         panel.style.height = Math.round(ih * frac) + 'px';
         panel.classList.toggle('p-full', frac >= 0.98);
+        panel.classList.toggle('p-map', frac <= 0.18);
       }
       return frac;
     }
-    function snapSheet(px) {
-      return applyFrac((px / window.innerHeight) < (LOW + FULL) / 2 ? LOW : FULL);
-    }
     if (isMobile() && panel) {
-      var cur = applyFrac(LOW);
+      var cur = applyFrac(MIX);
 
       var drag = null;
       function beginDrag(y) {
@@ -97,25 +98,33 @@ window.SA = window.SA || {};
         if (!drag) return;
         var dy = y - drag.y0;
         drag.moved = Math.max(drag.moved, Math.abs(dy));
-        if (!drag.dragging && drag.moved > 8) drag.dragging = true;  /* 超过阈值才算拖动，避免误触点击 */
+        if (!drag.dragging && drag.moved > 8) drag.dragging = true;  /* 超过阈值才算拖动，避免误触 */
         if (!drag.dragging) return;
         if (dy < 0) drag.up += -dy; else drag.down += dy;
         var ih = window.innerHeight;
         var h = drag.h0 - dy;
-        h = Math.max(ih * LOW - 40, Math.min(h, ih * FULL));
+        h = Math.max(ih * MAP, Math.min(h, ih * FULL));
         setSheet(h);
       }
       function endDrag() {
         if (!drag) return;
         if (panel) panel.classList.remove('dragging');
         var ih = window.innerHeight;
-        if (!drag.dragging) {          /* 轻点 → 反向切换档位 */
-          cur = applyFrac((sheetH() / ih) <= (LOW + FULL) / 2 ? FULL : LOW);
+        if (!drag.dragging) {          /* 轻点 → 逐级上跳：MAP→MIX→FULL→MIX */
+          var f = sheetH() / ih;
+          cur = applyFrac(f <= (MAP + MIX) / 2 ? MIX : (f >= (MIX + FULL) / 2 ? MIX : FULL));
         } else {
-          /* 上滑意图明显 → 直接全屏；下拉意图明显 → 回地图态；否则就近吸附 */
+          /* 按拖动方向落档：大幅上滑→FULL，小幅上拉→MIX；下拉→收起 */
           var upIntent = drag.up > Math.max(drag.down, 60);
           var downIntent = drag.down > Math.max(drag.up, 60);
-          cur = upIntent ? applyFrac(FULL) : (downIntent ? applyFrac(LOW) : snapSheet(sheetH()));
+          var f = sheetH() / ih;
+          if (upIntent) cur = applyFrac(f > 0.55 ? FULL : MIX);
+          else if (downIntent) {
+            var startFull = (drag.h0 / ih) >= 0.98;
+            /* 从全屏开始下拉：拖过 140px 就直接收到底(地图全屏)，否则回 MIX */
+            cur = applyFrac(startFull ? (drag.down > 140 ? MAP : MIX) : (f < 0.55 ? MAP : MIX));
+          }
+          else cur = applyFrac(f < (MAP + MIX) / 2 ? MAP : (f < (MIX + FULL) / 2 ? MIX : FULL));
         }
         drag = null;
       }
@@ -139,8 +148,8 @@ window.SA = window.SA || {};
       }
 
       /* 面板区手势联动（绑在 #panel 上，覆盖头部与列表）：
-         - 面板未全屏：向上滑 → 接管手势把面板拉向全屏（"想看更多就上滑"）
-         - 面板全屏：列表内容正常滚动；在列表顶部或头部再下滑 → 拉回地图态 */
+         - 非全屏：向上滑 → 接管并放大；列表顶部下拉 → 接管并缩小（到 MAP 即"下滑隐藏"）
+         - 全屏：内容自由滚动；滚到顶再下拉 → 收起 */
       if (panel) {
         var lt = null;
         function panStart(y) { lt = { y0: y, dragging: false }; }
@@ -150,11 +159,13 @@ window.SA = window.SA || {};
           var frac = sheetH() / window.innerHeight;
           if (!lt.dragging) {
             if (frac < 0.985) {
-              /* 非全屏：向上滑 = 把面板拉向全屏（下拉交还列表原生滚动） */
               if (dy < -14) { lt.dragging = true; beginDrag(lt.y0); if (panel) panel.classList.add('dragging'); }
+              else if (dy > 14 && listWrap && listWrap.scrollTop <= 0) {
+                /* 列表已滚到顶还继续下拉 → 缩小面板（MAP = 完全收起给地图） */
+                lt.dragging = true; beginDrag(lt.y0); if (panel) panel.classList.add('dragging');
+              }
               else return;
             } else {
-              /* 全屏：只有滚到顶后的下拉才接管（列表中部下拉 = 正常滚动内容） */
               if (dy > 14 && listWrap && listWrap.scrollTop <= 0) {
                 lt.dragging = true; beginDrag(lt.y0); if (panel) panel.classList.add('dragging');
               } else return;
@@ -174,6 +185,73 @@ window.SA = window.SA || {};
         panel.addEventListener('touchmove', function (e) { panMove(e.touches[0].clientY, e); }, { passive: false });
         panel.addEventListener('touchend', panEnd);
         panel.addEventListener('touchcancel', panEnd);
+      }
+
+      /* ===== 详情浮层：可拖高度（默认 58% 露出地图位置，上拉放大，下拉超过一半关闭） ===== */
+      var detail = document.getElementById('detail');
+      if (detail) {
+        var dg = null;
+        function detBegin(y) {
+          if (!detail.classList.contains('open')) return;
+          dg = { y0: y, h0: detail.getBoundingClientRect().height, moved: 0, dragging: false };
+          detail.classList.add('dragging');
+        }
+        function detMove(y) {
+          if (!dg) return;
+          var dy = y - dg.y0;
+          dg.moved = Math.max(dg.moved, Math.abs(dy));
+          if (!dg.dragging && dg.moved > 8) dg.dragging = true;
+          if (!dg.dragging) return;
+          var ih = window.innerHeight;
+          var h = dg.h0 - dy;
+          h = Math.max(ih * 0.30, Math.min(h, ih * 0.94));
+          detail.style.height = Math.round(h) + 'px';
+        }
+        function detEnd() {
+          if (!dg) return;
+          detail.classList.remove('dragging');
+          if (dg.dragging) {
+            var ih = window.innerHeight;
+            var f = detail.getBoundingClientRect().height / ih;
+            if (f < 0.34) {                        /* 拖得较低 → 关闭详情，回到看地图 */
+              var c = detail.querySelector('.dt-close');
+              if (c) c.click();
+            } else {
+              detail.style.height = Math.round(ih * (f > 0.68 ? 0.90 : 0.58)) + 'px';
+            }
+          }
+          dg = null;
+        }
+        function detDown(e) {
+          var r = detail.getBoundingClientRect();
+          var off = e.clientY - r.top;
+          if (off > 34) return;                      /* 只在顶部把手区拖动 */
+          if (e.target.closest && e.target.closest('button,a')) return; /* 放行返回/关闭按钮 */
+          e.preventDefault();
+          detBegin(e.clientY);
+        }
+        function detDrag(e) { if (dg) { e.preventDefault(); detMove(e.clientY); } }
+        function detUp() { detEnd(); }
+        if (window.PointerEvent) {
+          detail.addEventListener('pointerdown', detDown);
+          detail.addEventListener('pointermove', detDrag, { passive: false });
+          detail.addEventListener('pointerup', detUp);
+          detail.addEventListener('pointercancel', detUp);
+        }
+        detail.addEventListener('touchstart', function (e) {
+          if (e.touches.length !== 1) return;
+          var r = detail.getBoundingClientRect();
+          var off = e.touches[0].clientY - r.top;
+          if (off > 34) return;
+          if (e.target.closest && e.target.closest('button,a')) return;
+          detBegin(e.touches[0].clientY);
+        }, { passive: true });
+        detail.addEventListener('touchmove', function (e) {
+          if (dg && dg.dragging) e.preventDefault();
+          detMove(e.touches[0].clientY);
+        }, { passive: false });
+        detail.addEventListener('touchend', detUp);
+        detail.addEventListener('touchcancel', detUp);
       }
     }
   }

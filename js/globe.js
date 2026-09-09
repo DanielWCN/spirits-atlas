@@ -454,37 +454,87 @@ window.SA = window.SA || {};
   }
 
   /* ================= 交互 ================= */
+  var _ptrs = {}, _pinchLast = null, _pinchUsed = false;
+  function _ptrsLen() { var n = 0; for (var k in _ptrs) if (_ptrs.hasOwnProperty(k)) n++; return n; }
+  function _ptrsDist() {
+    var ids = Object.keys(_ptrs); if (ids.length < 2) return null;
+    var a = _ptrs[ids[0]], b = _ptrs[ids[1]];
+    return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+  }
   function bindEvents() {
     var dom = renderer.domElement;
     dom.addEventListener('pointerdown', function (e) {
-      dragging = true; moved = 0; lastPX = e.clientX; lastPY = e.clientY;
-      dragVX = dragVY = 0; lastInteract = performance.now();
-      try { dom.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
+      _ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var n = _ptrsLen();
+      if (n === 1) {            // 第一指：开始拖转/预备点击
+        dragging = true; moved = 0; lastPX = e.clientX; lastPY = e.clientY;
+        dragVX = dragVY = 0; lastInteract = performance.now();
+        _pinchUsed = false;
+        try { dom.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
+      } else if (n === 2) {     // 第二指：进入双指缩放，暂停拖转
+        dragging = false; moved = 0; dragVX = dragVY = 0;
+        _pinchUsed = true; _pinchLast = null;
+        try { dom.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
+      }
     });
     dom.addEventListener('pointermove', function (e) {
       var rect = dom.getBoundingClientRect();
       pointerPx.x = e.clientX - rect.left;
       pointerPx.y = e.clientY - rect.top;
       pointerPx.inside = true;
-      if (dragging) {
+      if (_ptrs[e.pointerId]) { _ptrs[e.pointerId].x = e.clientX; _ptrs[e.pointerId].y = e.clientY; }
+      var n = _ptrsLen();
+      if (n >= 2) {             /* 双指捏合缩放（触屏） */
+        var d = _ptrsDist();
+        if (d) {
+          if (_pinchLast != null && _pinchLast > 0) {
+            target.dist = Math.max(MIN_DIST, Math.min(MAX_DIST, target.dist * (_pinchLast / d)));
+            tween = null;
+          }
+          _pinchLast = d;
+        }
+        lastInteract = performance.now();
+        return;
+      }
+      if (n === 1 && dragging) {
         var dx = e.clientX - lastPX, dy = e.clientY - lastPY;
         lastPX = e.clientX; lastPY = e.clientY;
         moved += Math.abs(dx) + Math.abs(dy);
-        target.yaw -= dx * 0.0052;
-        target.pitch = Math.max(-1.32, Math.min(1.32, target.pitch + dy * 0.0048));
-        dragVX = -dx * 0.0052; dragVY = dy * 0.0048;
+        /* 触屏灵敏度约为鼠标的一半：手机稍微一碰不容易飞很远 */
+        var isTouch = e.pointerType === 'touch';
+        var rot = isTouch ? 0.0026 : 0.0052;
+        var pr = isTouch ? 0.0024 : 0.0048;
+        target.yaw -= dx * rot;
+        target.pitch = Math.max(-1.32, Math.min(1.32, target.pitch + dy * pr));
+        dragVX = -dx * rot; dragVY = dy * pr;
         lastInteract = performance.now();
         tween = null;
       }
     });
-    dom.addEventListener('pointerup', function (e) {
-      if (!dragging) return;
+    function _lift(e) {
+      if (_ptrs[e.pointerId]) delete _ptrs[e.pointerId];
+      var n = _ptrsLen();
+      if (n === 1) {            // 还剩一指 → 无缝继续拖转，避免视角跳动
+        var ids = Object.keys(_ptrs);
+        lastPX = _ptrs[ids[0]].x; lastPY = _ptrs[ids[0]].y;
+        dragging = true; dragVX = dragVY = 0; moved = 0;
+        return;
+      }
+      if (n > 0) return;
+      if (!dragging) { dragging = false; lastInteract = performance.now(); return; }
       dragging = false;
       lastInteract = performance.now();
-      if (moved < 6) handleClick(e);
-      else { target.yaw += dragVX * 6; target.pitch += dragVY * 4; }
-    });
-    dom.addEventListener('pointercancel', function () { dragging = false; });
+      if (!_pinchUsed && moved < 6) handleClick(e);
+      else {
+        /* 惯性：触屏几乎不给（避免"松手还在飞"），鼠标保留轻度惯性 */
+        var isTouch = e.pointerType === 'touch';
+        target.yaw += dragVX * (isTouch ? 1.6 : 6);
+        target.pitch += dragVY * (isTouch ? 1.0 : 4);
+        if (isTouch) { dragVX *= 0.82; dragVY *= 0.82; }
+      }
+    }
+    dom.addEventListener('pointerup', _lift);
+    dom.addEventListener('pointercancel', _lift);
     dom.addEventListener('pointerleave', function () { pointerPx.inside = false; dragging = false; });
     dom.addEventListener('wheel', function (e) {
       e.preventDefault();
@@ -662,9 +712,9 @@ window.SA = window.SA || {};
       }
       // 自动旋转已按用户要求彻底关闭：地球在用户拖拽后完全静止，不再自行漂移。
       // （原逻辑：!dragging && now - lastInteract > 4500 → target.yaw += 0.0005）
-      cam.yaw += (target.yaw - cam.yaw) * 0.11;
-      cam.pitch += (target.pitch - cam.pitch) * 0.11;
-      cam.dist += (target.dist - cam.dist) * 0.11;
+      cam.yaw += (target.yaw - cam.yaw) * 0.16;
+      cam.pitch += (target.pitch - cam.pitch) * 0.16;
+      cam.dist += (target.dist - cam.dist) * 0.16;
     }
     updateCamera();
 

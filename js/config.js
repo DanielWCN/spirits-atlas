@@ -10,7 +10,7 @@ window.SA = window.SA || {};
   /* ---------- 品类定义（颜色体系统一：知识卡 / 标签 / 地球标记共用） ---------- */
   SA.CATEGORIES = [
     { id: 'red',       name: '红葡萄酒',  short: '红酒', icon: '🍷', color: '#e11d48', rgb: [225, 29, 72] },
-    { id: 'white',     name: '白葡萄酒',  short: '白酒', icon: '🥂', color: '#e6c34a', rgb: [230, 195, 74] },
+    { id: 'white',     name: '白葡萄酒',  short: '白葡萄酒', icon: '🥂', color: '#e6c34a', rgb: [230, 195, 74] },
     { id: 'sparkling', name: '起泡酒',    short: '起泡', icon: '🍾', color: '#6fd3e6', rgb: [111, 211, 230] },
     { id: 'whisky',    name: '威士忌',    short: '威士忌', icon: '🥃', color: '#f09922', rgb: [240, 153, 34] },
     { id: 'beer',      name: '啤酒/苹果酒', short: '啤酒', icon: '🍺', color: '#f6d365', rgb: [246, 211, 101] },

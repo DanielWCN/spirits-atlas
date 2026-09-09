@@ -634,12 +634,17 @@ canvas, #stage canvas {
     background: rgba(160,200,255,.5);
   }
   #mobileDrawerHandle::after {
-    content: '上滑铺满全屏'; position: absolute;
+    content: '上滑铺满 · 下拉收起'; position: absolute;
     top: 36px; left: 50%; transform: translateX(-50%);
     font-size: 10px; color: var(--txt-3); white-space: nowrap;
     letter-spacing: .2px; pointer-events: none;
   }
-  #panel.p-full #mobileDrawerHandle::after { content: '▼ 下拉回到地图'; color: var(--accent); font-weight: 600; }
+  #panel.p-map #mobileDrawerHandle::after { content: '上滑打开酒单'; color: var(--accent); font-weight: 600; }
+  #panel.p-full #mobileDrawerHandle::after { content: '▼ 下拉收起'; color: var(--accent); font-weight: 600; }
+  /* 地图全屏态(p-map)：缩放按钮上移避开底部小条，保证可点 */
+  #panel.p-map ~ #stage .hud-zoom,
+  body:has(#panel.p-map) .hud-zoom { bottom: 118px; }
+  #panel.p-map ~ #stage #hudCount { opacity: 1; }
 
   .panel-head { flex: 0 0 auto; position: relative; padding: 46px 12px 2px; }
   .panel-head .brand h1 { font-size: 13px; margin: 0; letter-spacing: .5px; }
@@ -700,11 +705,25 @@ canvas, #stage canvas {
   .detail-wrap {
     left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
     width: 100% !important; max-width: 100% !important;
-    height: 88vh; max-height: 88vh;
+    height: 58vh; max-height: 92vh;
     border-radius: 18px 18px 0 0;
     border: 1px solid var(--line-2); border-bottom: 0;
+    overflow: hidden;               /* 滚动交给内部 .dt，把手固定在浮层顶部 */
+    transition: transform .5s var(--ease), height .32s var(--ease);
     transform: translateY(100%);
   }
+  /* 详情把手：可按住上下拖动（下方内容高度随意调），也可上拉更大/下拉关闭 */
+  #detail::before {
+    content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 46px; height: 5px; border-radius: 3px; background: rgba(200,214,235,.4);
+    z-index: 31; pointer-events: none;
+  }
+  #detail .dt {
+    height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding-top: 58px;              /* 给顶部把手让位 */
+  }
+  #detail .dt::-webkit-scrollbar { width: 4px; }
+  #detail .dt::-webkit-scrollbar-thumb { background: rgba(200,214,235,.2); border-radius: 3px; }
   .detail-wrap.open { transform: translateY(0); }
 
   /* 移动列表行 = 精简两行(名称+产地)，风味/徽章放详情卡，行高 74→约50，一屏可刷更多 */

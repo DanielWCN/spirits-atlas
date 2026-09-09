@@ -475,6 +475,7 @@ window.SA = window.SA || {};
       (it.source_url ? '<a class="btn-src" href="' + esc(it.source_url) + '" target="_blank" rel="noopener">数据源：' + esc(it.source) + '</a>'
         : '<span class="btn-src" style="border:0">数据源：' + esc(it.source) + '</span>') +
       '</div></div>';
+    el.detail.style.height = '';      /* 回到默认 58%，不要残留上次拖动的高度 */
     el.detail.classList.add('open');
 
     fixThumbs(el.detail);
