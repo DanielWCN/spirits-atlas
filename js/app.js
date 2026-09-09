@@ -59,33 +59,119 @@ window.SA = window.SA || {};
       rt = setTimeout(function () { SA.globe.resize(); }, 120);
     });
 
-    /* 移动端抽屉 handle：点击切换 body.mobile-drawer-up。
-       默认（首次进入）即展开酒单 —— 用户手机上第一个诉求是"能看列表、
-       能下滑"，地球仍保留顶部 30dvh 可点选；想看大地球再点一次把手。 */
+    /* ============ 移动端（≤600px）：可拖拽底部抽屉 ============
+       地图全屏铺底；#panel 是悬浮底部的抽屉：
+       · 按住顶部把手上下拖动 → 实时跟手，松手吸附到 LOW(42%) / HIGH(88%)
+       · 轻点把手 → LOW ↔ HIGH 切换
+       · 酒单滚到顶后再上拉 → 继续把抽屉拉高（联动）
+    */
     var isMobile = function () { return window.innerWidth <= 600; };
-    if (isMobile()) {
-      document.body.classList.add('mobile-drawer-up');
-      setTimeout(function () { SA.globe.resize(); }, 400);
-    }
+    var panel = document.getElementById('panel');
     var handle = document.getElementById('mobileDrawerHandle');
-    if (handle) {
-      handle.addEventListener('click', function (e) {
-        e.stopPropagation();
-        document.body.classList.toggle('mobile-drawer-up');
-        /* 抽屉切换后让地球立即重算尺寸 */
-        setTimeout(function () { SA.globe.resize(); }, 380);
-      });
+    var listWrap = document.getElementById('listWrap');
+    var LOW = 0.42, HIGH = 0.88;
+
+    function sheetH() { return panel ? panel.getBoundingClientRect().height : 0; }
+    function setSheet(px) { if (panel) panel.style.height = Math.round(px) + 'px'; }
+    function snapSheet(px) {
+      var ih = window.innerHeight;
+      var to = (px / ih) < (LOW + HIGH) / 2 ? LOW : HIGH;
+      if (panel) panel.style.height = Math.round(ih * to) + 'px';
+      return to;
     }
-    /* 手机：点击列表项时若处于"酒单未展开"，先展开酒单（否则详情被盖住/看不到联动） */
-    document.addEventListener('click', function (e) {
-      if (!isMobile()) return;
-      var item = e.target.closest('#panel .item');
-      if (!item) return;
-      if (!document.body.classList.contains('mobile-drawer-up')) {
-        document.body.classList.add('mobile-drawer-up');
-        setTimeout(function () { SA.globe.resize(); }, 380);
+    if (isMobile() && panel) {
+      var cur = LOW;
+      panel.style.height = (window.innerHeight * cur) + 'px';
+
+      var drag = null;
+      function beginDrag(y) {
+        drag = { y0: y, h0: sheetH(), moved: 0, dragging: false };
+        if (panel) panel.classList.add('dragging');
       }
-    }, true);
+      function moveDrag(y) {
+        if (!drag) return;
+        var dy = y - drag.y0;
+        drag.moved = Math.max(drag.moved, Math.abs(dy));
+        if (!drag.dragging && drag.moved > 8) drag.dragging = true;  /* 超过阈值才算拖动，避免误触 */
+        if (!drag.dragging) return;
+        var ih = window.innerHeight;
+        var h = drag.h0 - dy;
+        h = Math.max(ih * LOW - 60, Math.min(h, ih * HIGH + 40));
+        setSheet(h);
+      }
+      function endDrag() {
+        if (!drag) return;
+        if (panel) panel.classList.remove('dragging');
+        var ih = window.innerHeight;
+        if (!drag.dragging) {          /* 轻点 → 反向切换档位 */
+          cur = (sheetH() / ih) <= (LOW + HIGH) / 2 ? HIGH : LOW;
+          panel.style.height = Math.round(ih * cur) + 'px';
+        } else {
+          cur = snapSheet(sheetH());
+        }
+        drag = null;
+      }
+
+      /* 支持 Pointer Events（现代 WebView），无则退回 Touch */
+      if (window.PointerEvent && handle) {
+        handle.addEventListener('pointerdown', function (e) {
+          e.preventDefault(); beginDrag(e.clientY);
+          handle.setPointerCapture && handle.setPointerCapture(e.pointerId);
+        });
+        handle.addEventListener('pointermove', function (e) { moveDrag(e.clientY); });
+        handle.addEventListener('pointerup', endDrag);
+        handle.addEventListener('pointercancel', endDrag);
+      } else if (handle) {
+        handle.addEventListener('touchstart', function (e) { beginDrag(e.touches[0].clientY); }, { passive: true });
+        handle.addEventListener('touchmove', function (e) {
+          if (drag && drag.dragging) e.preventDefault();
+          moveDrag(e.touches[0].clientY);
+        }, { passive: false });
+        handle.addEventListener('touchend', endDrag);
+      }
+
+      /* 酒单滚动联动：滚到顶再上拉 → 拉高抽屉（Pointer + Touch 双路径） */
+      if (listWrap) {
+        var lt = null;
+        function lwStart(y) {
+          lt = { y0: y, dragging: false };
+        }
+        function lwMove(y, cancelable) {
+          if (!lt) return;
+          var dy = y - lt.y0;
+          if (!lt.dragging) {
+            /* 抽屉未到最高、且列表在顶部、且手指上拉 → 接管为抽屉拖动 */
+            var nearHigh = sheetH() / window.innerHeight > HIGH - 0.04;
+            if (!nearHigh && listWrap.scrollTop <= 0 && dy < -10) {
+              lt.dragging = true;
+              beginDrag(lt.y0);
+              if (panel) panel.classList.add('dragging');
+            } else return;
+          }
+          if (cancelable) moveDrag(y);
+        }
+        function lwEnd() {
+          if (lt && lt.dragging) endDrag();
+          lt = null;
+        }
+        function peDown(e) { lwStart(e.clientY); }
+        function peMove(e) {
+          /* pointer 按下时若已接管为拖动则阻止原生滚动 */
+          if (lt && lt.dragging && e.cancelable) e.preventDefault();
+          lwMove(e.clientY, true);
+        }
+        if (window.PointerEvent) {
+          listWrap.addEventListener('pointerdown', peDown);
+          listWrap.addEventListener('pointermove', peMove, { passive: false });
+          listWrap.addEventListener('pointerup', lwEnd);
+          listWrap.addEventListener('pointercancel', lwEnd);
+        }
+        listWrap.addEventListener('touchstart', function (e) { lwStart(e.touches[0].clientY); }, { passive: true });
+        listWrap.addEventListener('touchmove', function (e) { lwMove(e.touches[0].clientY, true); }, { passive: false });
+        listWrap.addEventListener('touchend', lwEnd);
+        listWrap.addEventListener('touchcancel', lwEnd);
+      }
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
