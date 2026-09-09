@@ -27,7 +27,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-#app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+#app { display: flex; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
 
 /* ============================================================
  * 关键：canvas 必须禁掉浏览器默认触摸手势
@@ -585,60 +585,82 @@ canvas, #stage canvas {
 }
 
 /* ==================== 移动端（≤600px） ====================
-   关键改动：抽屉式 panel，默认露 35% 高度（地球占 65%），顶部 handle 可上滑到 88%。
-   抽屉状态由 body.mobile-drawer-up 切换（JS 监听 handle 点击）。
+   布局目标：上 3D 地球 + 下 酒单面板，两个固定分区，整页不滚动；
+   酒单在自己的滚动区里上下滑（修复：旧版酒单被 4 行品类标签+知识卡
+   挤压到只剩约 24px，导致"手机上看不到列表、没法下滑、感觉没联动"）。
+   默认 body.mobile-drawer-up（酒单展开、顶部留 30dvh 地球可点）；
+   点顶部把手可切换为"沉浸看地球"（面板收为 34vh）。
 */
 @media (max-width: 600px) {
   :root { --radius: 12px; }
   #app { flex-direction: column-reverse; }    /* panel 在底部，地球在上 */
 
-  /* 抽屉式 panel：默认 35vh，能上滑到 88vh */
-  #panel {
-    flex: 0 0 35vh; height: 35vh; width: 100%;
-    border-right: 0; border-top: 1px solid var(--line);
-    border-bottom: 0;
-    transform: translateY(0); transition: transform .35s var(--ease), height .35s var(--ease);
-    will-change: transform, height;
-  }
-  body.mobile-drawer-up #panel { height: 88vh; }
-  body.mobile-drawer-up #stage { flex-basis: 12vh; }
-  #stage { flex: 1 1 65vh; min-height: 0; }
+  /* —— 地球区 —— */
+  #stage { flex: 1 1 auto; min-height: 0; }
+  body.mobile-drawer-up #stage { flex: 0 0 30vh; flex-basis: 30dvh; min-height: 120px; }
 
-  /* 抽屉顶部把手：方便用户触摸上滑 */
-  .panel-head { position: relative; padding: 28px 14px 10px; }
-  .panel-head::before {
-    content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-    width: 44px; height: 4px; border-radius: 2px;
-    background: rgba(160, 200, 255, .35);
+  /* —— 酒单面板：占剩余高度 —— */
+  #panel {
+    flex: 0 0 34vh; height: 34vh; width: 100%;
+    border-top: 1px solid var(--line);
+    min-height: 0; overflow: hidden;
   }
+  body.mobile-drawer-up #panel { flex: 1 1 auto; height: auto; }
+  body.mobile-drawer-up #listWrap { flex: 1 1 auto; }
+
+  /* 顶部把手：热区 30px，横条更明显 */
   #mobileDrawerHandle {
-    position: absolute; top: 0; left: 0; right: 0; height: 22px;
+    position: absolute; top: 0; left: 0; right: 0; height: 30px;
     z-index: 10; cursor: pointer;
   }
+  #mobileDrawerHandle::after {
+    content: ''; position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+    width: 46px; height: 4px; border-radius: 2px;
+    background: rgba(160, 200, 255, .45);
+  }
+  .panel-head { position: relative; padding: 26px 12px 6px; }
+  .panel-head .brand h1 { font-size: 15px; margin: 0; }
+  .panel-head .brand p,
+  .brand-sub { display: none; }
 
-  /* 地球贴满上层，HUD 触屏按钮加大 */
-  #hudCount { font-size: 10.5px; padding: 5px 9px; top: 8px; left: 8px; }
-  .hud-zoom { right: 8px; bottom: 8px; gap: 8px; }
-  .hud-zoom button { width: 38px; height: 38px; font-size: 17px; }
-  .hud-sources { display: none; }     /* 移动端让位地球 */
-  .hud-hint { font-size: 10px; top: 8px; right: 8px; left: auto; }
+  /* 品类标签：单行横向滚动（旧版 4 行网格吃 206px，把酒单挤没） */
+  #catTabs {
+    display: flex; flex-wrap: nowrap; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 6px 8px; gap: 5px;
+    border-bottom: 1px solid var(--line);
+  }
+  #catTabs::-webkit-scrollbar { display: none; }
+  #catTabs .tab { flex: 0 0 auto; min-width: 62px; min-height: 38px; }
 
-  /* 列表缩略图 38px，文字紧凑 */
-  .item-thumb { width: 38px; height: 38px; }
+  /* 移动端隐藏低优先级块：把高度让给酒单（知识卡在详情/品类页仍可看） */
+  #quickFilter, #hotRegions, #knowledge { display: none; }
+
+  .search-wrap { padding: 6px 8px; }
+  #searchInput { font-size: 13px; padding: 7px 8px; }
+  .filter-row { gap: 6px; padding: 4px 8px 6px; }
+
+  /* 酒单：独立滚动区（本次修复的核心） */
+  #listWrap {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 8px 14px;
+  }
+  #listWrap::-webkit-scrollbar { width: 4px; }
+
+  .item-thumb { width: 40px; height: 40px; }
   .item-title { font-size: 12.5px; }
   .item-sub { font-size: 10.5px; }
   .item-right { font-size: 11.5px; }
   .badge { font-size: 10px; padding: 1px 5px; }
   .tag { font-size: 10px; }
 
-  /* 知识卡降为更紧凑的最大高度 */
-  #knowledge { max-height: 18vh; }
-
-  /* 详情浮层：移动端全宽从底部弹出，而非右侧浮层 */
+  /* 详情浮层：全宽从底部弹出，自身可滚动看完整内容 */
   .detail-wrap {
     left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
     width: 100% !important; max-width: 100% !important;
-    height: 76vh; max-height: 76vh;
+    height: 82vh; height: 82dvh; max-height: 82vh; max-height: 82dvh;
     transform: translateY(100%);
     border-radius: 16px 16px 0 0;
     border: 1px solid var(--line-2);
@@ -646,33 +668,15 @@ canvas, #stage canvas {
   }
   .detail-wrap.open { transform: translateY(0); }
 
-  /* 标签字号在触屏上略放大 */
+  /* HUD 触屏按钮加大 */
+  #hudCount { font-size: 10.5px; padding: 5px 9px; top: 8px; left: 8px; }
+  .hud-zoom { right: 8px; bottom: 8px; gap: 8px; }
+  .hud-zoom button { width: 40px; height: 40px; font-size: 17px; }
+  .hud-sources { display: none; }
+  .hud-hint { display: none; }
+
   .globe-label.lvl-far  { font-size: 10.5px; }
   .globe-label.lvl-mid  { font-size: 12px; }
   .globe-label.lvl-near { font-size: 13.5px; }
-
-  /* 品类 tabs：4 列横滑 */
-  #catTabs {
-    grid-template-columns: repeat(4, minmax(64px, 1fr));
-    overflow-x: auto;
-  }
-  .tab { font-size: 11px; min-height: 30px; }
-
-  /* 搜索栏紧凑 */
-  .search-wrap { padding: 6px 8px; }
-  #searchInput { font-size: 13px; padding: 7px 8px; }
-
-  /* === 抽屉内容可滚 ===
-     #panel 是 flex column 子项，列表容器必须 min-height:0 + overflow-y:auto，
-     否则抽屉 35vh 时列表会被 .tabs/.filter-bar 撑出可视区、无法下拉。 */
-  #panel { min-height: 0; }
-  #panel .list-area,
-  #list,
-  .panel-list {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
 }
 

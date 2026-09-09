@@ -59,8 +59,14 @@ window.SA = window.SA || {};
       rt = setTimeout(function () { SA.globe.resize(); }, 120);
     });
 
-    /* 移动端抽屉 handle：点击切换 body.mobile-drawer-up，地球从 65vh 缩到 12vh，
-       列表从 35vh 升到 88vh（用户想看清列表就上滑，想看地球就下滑） */
+    /* 移动端抽屉 handle：点击切换 body.mobile-drawer-up。
+       默认（首次进入）即展开酒单 —— 用户手机上第一个诉求是"能看列表、
+       能下滑"，地球仍保留顶部 30dvh 可点选；想看大地球再点一次把手。 */
+    var isMobile = function () { return window.innerWidth <= 600; };
+    if (isMobile()) {
+      document.body.classList.add('mobile-drawer-up');
+      setTimeout(function () { SA.globe.resize(); }, 400);
+    }
     var handle = document.getElementById('mobileDrawerHandle');
     if (handle) {
       handle.addEventListener('click', function (e) {
@@ -70,12 +76,14 @@ window.SA = window.SA || {};
         setTimeout(function () { SA.globe.resize(); }, 380);
       });
     }
-    /* 抽屉展开时，点击列表项应自动收起抽屉以显示详情浮层（否则浮层被抽屉遮住） */
+    /* 手机：点击列表项时若处于"酒单未展开"，先展开酒单（否则详情被盖住/看不到联动） */
     document.addEventListener('click', function (e) {
-      if (window.innerWidth > 600) return;
-      if (!document.body.classList.contains('mobile-drawer-up')) return;
-      if (e.target.closest('#panel .item')) {
-        setTimeout(function () { document.body.classList.remove('mobile-drawer-up'); }, 80);
+      if (!isMobile()) return;
+      var item = e.target.closest('#panel .item');
+      if (!item) return;
+      if (!document.body.classList.contains('mobile-drawer-up')) {
+        document.body.classList.add('mobile-drawer-up');
+        setTimeout(function () { SA.globe.resize(); }, 380);
       }
     }, true);
   }
