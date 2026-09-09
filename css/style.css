@@ -289,9 +289,11 @@ canvas, #stage canvas {
 }
 .item-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 6px; flex: 0 0 auto; background: var(--c); box-shadow: 0 0 9px var(--c); }
 /* 列表缩略图 */
+/* 列表缩略图：contain 完整显示瓶身（cover 会裁成局部特写，看不清是哪瓶） */
 .item-thumb {
-  width: 40px; height: 40px; flex: 0 0 auto; border-radius: 9px; object-fit: cover;
-  background: #0d1320; border: 1px solid rgba(255, 255, 255, .09);
+  width: 46px; height: 46px; flex: 0 0 auto; border-radius: 10px; object-fit: contain;
+  padding: 3px;
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1);
   box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
 }
 /* 详情大图 */
@@ -694,7 +696,7 @@ canvas, #stage canvas {
   #listWrap::-webkit-scrollbar { width: 4px; }
   #list .item { padding: 6px 9px; gap: 8px; margin-bottom: 3px; border-radius: 12px; }
   #list .item .item-dot { width: 6px; height: 6px; margin-top: 5px; }
-  #list .item .item-thumb { width: 34px; height: 34px; border-radius: 8px; }
+  #list .item .item-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: contain; padding: 2px; }
   #list .item .item-title { font-size: 12px; }
   #list .item .item-sub { font-size: 10px; margin-top: 1px; }
   #list .item .item-right { font-size: 11px; gap: 2px; }
@@ -705,7 +707,7 @@ canvas, #stage canvas {
   .detail-wrap {
     left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
     width: 100% !important; max-width: 100% !important;
-    height: 58vh; max-height: 92vh;
+    height: 46vh; max-height: 96vh;
     border-radius: 18px 18px 0 0;
     border: 1px solid var(--line-2); border-bottom: 0;
     overflow: hidden;               /* 滚动交给内部 .dt，把手固定在浮层顶部 */

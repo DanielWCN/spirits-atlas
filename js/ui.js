@@ -469,14 +469,18 @@ window.SA = window.SA || {};
       '<div class="dt-block"><label>描述 / 品鉴笔记</label><p>' + esc(it.description || '').replace(/\n/g, '<br>') + '</p></div>' +
       (it.food_pairing ? '<div class="dt-block"><label>食物搭配</label><p>' + esc(it.food_pairing) + '</p></div>' : '') +
       '<div class="dt-foot">' +
-      '<button class="btn-fly">🌍 地球定位</button>' +
+      '<button class="btn-fly">📍 在地图看位置</button>' +
       (SA.imageSearchURL ? '<a class="btn-fly" href="' + esc(SA.imageSearchURL(it)) + '" target="_blank" rel="noopener">🔍 查看实拍瓶身</a>' : '') +
       (reg ? '<button class="btn-fly" data-region="' + esc(reg.id) + '">📖 ' + esc(reg.name) + ' 产区百科</button>' : '') +
       (it.source_url ? '<a class="btn-src" href="' + esc(it.source_url) + '" target="_blank" rel="noopener">数据源：' + esc(it.source) + '</a>'
         : '<span class="btn-src" style="border:0">数据源：' + esc(it.source) + '</span>') +
       '</div></div>';
-    el.detail.style.height = '';      /* 回到默认 58%，不要残留上次拖动的高度 */
+    el.detail.style.height = '';      /* 回到默认高度，不要残留上次拖动的高度 */
     el.detail.classList.add('open');
+    /* 手机上打开详情前先把列表面板收成小条 → 露出全屏地图做背景，酒的位置清晰可见 */
+    try {
+      if (window.innerWidth <= 600) window.dispatchEvent(new window.Event('sa:detailopen'));
+    } catch (err) { /* noop */ }
 
     fixThumbs(el.detail);
     var back = el.detail.querySelector('.dt-back');
@@ -488,7 +492,12 @@ window.SA = window.SA || {};
     el.detail.querySelector('.dt-close').addEventListener('click', function () {
       hideDetail();
     });
-    el.detail.querySelector('.btn-fly:not([data-region])').addEventListener('click', function () { SA.globe.setSelected(it); });
+    /* “在地图看位置”：收起详情 → 地图全屏展示该酒的位置与高亮（手机上自动切纯地图态） */
+    el.detail.querySelector('.btn-fly:not([data-region])').addEventListener('click', function () {
+      SA.globe.setSelected(it);
+      hideDetail();
+      try { window.dispatchEvent(new window.Event('sa:viewmap')); } catch (err) { /* noop */ }
+    });
     var rb = el.detail.querySelector('.btn-fly[data-region]');
     if (rb) rb.addEventListener('click', function () {
       var r = SA.regionById(this.getAttribute('data-region'));

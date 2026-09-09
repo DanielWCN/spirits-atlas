@@ -500,10 +500,10 @@ window.SA = window.SA || {};
         var dx = e.clientX - lastPX, dy = e.clientY - lastPY;
         lastPX = e.clientX; lastPY = e.clientY;
         moved += Math.abs(dx) + Math.abs(dy);
-        /* 触屏灵敏度约为鼠标的一半：手机稍微一碰不容易飞很远 */
+        /* 触屏灵敏度远低于鼠标（约为鼠标 1/3），手机慢拖也能精细控制 */
         var isTouch = e.pointerType === 'touch';
-        var rot = isTouch ? 0.0026 : 0.0052;
-        var pr = isTouch ? 0.0024 : 0.0048;
+        var rot = isTouch ? 0.0016 : 0.0052;
+        var pr = isTouch ? 0.0015 : 0.0048;
         target.yaw -= dx * rot;
         target.pitch = Math.max(-1.32, Math.min(1.32, target.pitch + dy * pr));
         dragVX = -dx * rot; dragVY = dy * pr;
@@ -528,9 +528,9 @@ window.SA = window.SA || {};
       else {
         /* 惯性：触屏几乎不给（避免"松手还在飞"），鼠标保留轻度惯性 */
         var isTouch = e.pointerType === 'touch';
-        target.yaw += dragVX * (isTouch ? 1.6 : 6);
-        target.pitch += dragVY * (isTouch ? 1.0 : 4);
-        if (isTouch) { dragVX *= 0.82; dragVY *= 0.82; }
+        target.yaw += dragVX * (isTouch ? 0.6 : 6);
+        target.pitch += dragVY * (isTouch ? 0.4 : 4);
+        if (isTouch) { dragVX *= 0.70; dragVY *= 0.70; }
       }
     }
     dom.addEventListener('pointerup', _lift);

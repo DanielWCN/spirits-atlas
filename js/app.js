@@ -204,7 +204,7 @@ window.SA = window.SA || {};
           if (!dg.dragging) return;
           var ih = window.innerHeight;
           var h = dg.h0 - dy;
-          h = Math.max(ih * 0.30, Math.min(h, ih * 0.94));
+          h = Math.max(ih * 0.30, Math.min(h, ih * 0.98));
           detail.style.height = Math.round(h) + 'px';
         }
         function detEnd() {
@@ -217,7 +217,7 @@ window.SA = window.SA || {};
               var c = detail.querySelector('.dt-close');
               if (c) c.click();
             } else {
-              detail.style.height = Math.round(ih * (f > 0.68 ? 0.90 : 0.58)) + 'px';
+              detail.style.height = Math.round(ih * (f > 0.66 ? 0.96 : 0.46)) + 'px';
             }
           }
           dg = null;
@@ -252,6 +252,22 @@ window.SA = window.SA || {};
         }, { passive: false });
         detail.addEventListener('touchend', detUp);
         detail.addEventListener('touchcancel', detUp);
+
+        /* 打开详情：面板收成小条，露出全屏地图作背景，酒的位置在详情上方可见 */
+        window.addEventListener('sa:detailopen', function () {
+          if (!isMobile()) return;
+          applyFrac(MAP);
+          /* 等 flyTo 动画基本到位后再把详情压矮一点，避免遮住屏幕中央的标记 */
+          setTimeout(function () {
+            var d = document.getElementById('detail');
+            if (d && d.classList.contains('open')) d.style.height = Math.round(window.innerHeight * 0.46) + 'px';
+          }, 560);
+        });
+        /* "📍 在地图看位置" → 收起详情并切到纯地图态，直观看到这款酒的位置 */
+        window.addEventListener('sa:viewmap', function () {
+          if (!isMobile()) return;
+          applyFrac(MAP);
+        });
       }
     }
   }
