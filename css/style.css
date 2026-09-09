@@ -16,7 +16,8 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
+html, body { height: 100%; margin: 0; overscroll-behavior: contain; }
+
 body {
   background: var(--bg);
   color: var(--txt);
@@ -27,6 +28,19 @@ body {
 }
 
 #app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+
+/* ============================================================
+ * 关键：canvas 必须禁掉浏览器默认触摸手势
+ * 否则在微信/移动 WebView 里，地球拖拽会和系统下拉关闭、
+ * 双指缩放抢手势，导致"地球转起来特别别扭"。
+ * 同时禁掉文本选中，避免长按出选择气泡。
+ * ============================================================ */
+canvas, #stage canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 
 /* ==================== 左侧面板 ==================== */
 #panel {
@@ -647,5 +661,18 @@ body {
   /* 搜索栏紧凑 */
   .search-wrap { padding: 6px 8px; }
   #searchInput { font-size: 13px; padding: 7px 8px; }
+
+  /* === 抽屉内容可滚 ===
+     #panel 是 flex column 子项，列表容器必须 min-height:0 + overflow-y:auto，
+     否则抽屉 35vh 时列表会被 .tabs/.filter-bar 撑出可视区、无法下拉。 */
+  #panel { min-height: 0; }
+  #panel .list-area,
+  #list,
+  .panel-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
