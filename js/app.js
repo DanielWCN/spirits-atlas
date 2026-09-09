@@ -59,44 +59,50 @@ window.SA = window.SA || {};
       rt = setTimeout(function () { SA.globe.resize(); }, 120);
     });
 
-    /* ============ 移动端（≤600px）：可拖拽底部抽屉 ============
-       地图全屏铺底；#panel 是悬浮底部的抽屉：
-       · 按住顶部把手上下拖动 → 实时跟手，松手吸附到 LOW(42%) / HIGH(88%)
-       · 轻点把手 → LOW ↔ HIGH 切换
-       · 酒单滚到顶后再上拉 → 继续把抽屉拉高（联动）
+    /* ============ 移动端（≤600px）：全屏可刷的酒单 ============
+       心智模型：打开页面主要就是「刷酒」。
+       · 面板默认占 60% 屏（列表为主、顶部仍留 40% 地球可点）
+       · 在列表里往上一滑 → 面板平滑铺满整屏（100%），酒单全屏可刷
+       · 面板全屏后再下滑 → 先滚列表内容；滚到顶部继续下滑 → 退回地图态 60%
+       · 顶部把手：按住可上下拖（实时跟手），轻点 = 一键切换 60% ↔ 100%
     */
     var isMobile = function () { return window.innerWidth <= 600; };
     var panel = document.getElementById('panel');
     var handle = document.getElementById('mobileDrawerHandle');
     var listWrap = document.getElementById('listWrap');
-    var LOW = 0.42, HIGH = 0.88;
+    var LOW = 0.60, FULL = 1.0;          /* 地图态 60% ↔ 全屏酒单 */
 
     function sheetH() { return panel ? panel.getBoundingClientRect().height : 0; }
     function setSheet(px) { if (panel) panel.style.height = Math.round(px) + 'px'; }
-    function snapSheet(px) {
+    function applyFrac(frac) {
       var ih = window.innerHeight;
-      var to = (px / ih) < (LOW + HIGH) / 2 ? LOW : HIGH;
-      if (panel) panel.style.height = Math.round(ih * to) + 'px';
-      return to;
+      if (panel) {
+        panel.style.height = Math.round(ih * frac) + 'px';
+        panel.classList.toggle('p-full', frac >= 0.98);
+      }
+      return frac;
+    }
+    function snapSheet(px) {
+      return applyFrac((px / window.innerHeight) < (LOW + FULL) / 2 ? LOW : FULL);
     }
     if (isMobile() && panel) {
-      var cur = LOW;
-      panel.style.height = (window.innerHeight * cur) + 'px';
+      var cur = applyFrac(LOW);
 
       var drag = null;
       function beginDrag(y) {
-        drag = { y0: y, h0: sheetH(), moved: 0, dragging: false };
+        drag = { y0: y, h0: sheetH(), moved: 0, up: 0, down: 0, dragging: false };
         if (panel) panel.classList.add('dragging');
       }
       function moveDrag(y) {
         if (!drag) return;
         var dy = y - drag.y0;
         drag.moved = Math.max(drag.moved, Math.abs(dy));
-        if (!drag.dragging && drag.moved > 8) drag.dragging = true;  /* 超过阈值才算拖动，避免误触 */
+        if (!drag.dragging && drag.moved > 8) drag.dragging = true;  /* 超过阈值才算拖动，避免误触点击 */
         if (!drag.dragging) return;
+        if (dy < 0) drag.up += -dy; else drag.down += dy;
         var ih = window.innerHeight;
         var h = drag.h0 - dy;
-        h = Math.max(ih * LOW - 60, Math.min(h, ih * HIGH + 40));
+        h = Math.max(ih * LOW - 40, Math.min(h, ih * FULL));
         setSheet(h);
       }
       function endDrag() {
@@ -104,10 +110,12 @@ window.SA = window.SA || {};
         if (panel) panel.classList.remove('dragging');
         var ih = window.innerHeight;
         if (!drag.dragging) {          /* 轻点 → 反向切换档位 */
-          cur = (sheetH() / ih) <= (LOW + HIGH) / 2 ? HIGH : LOW;
-          panel.style.height = Math.round(ih * cur) + 'px';
+          cur = applyFrac((sheetH() / ih) <= (LOW + FULL) / 2 ? FULL : LOW);
         } else {
-          cur = snapSheet(sheetH());
+          /* 上滑意图明显 → 直接全屏；下拉意图明显 → 回地图态；否则就近吸附 */
+          var upIntent = drag.up > Math.max(drag.down, 60);
+          var downIntent = drag.down > Math.max(drag.up, 60);
+          cur = upIntent ? applyFrac(FULL) : (downIntent ? applyFrac(LOW) : snapSheet(sheetH()));
         }
         drag = null;
       }
@@ -130,46 +138,42 @@ window.SA = window.SA || {};
         handle.addEventListener('touchend', endDrag);
       }
 
-      /* 酒单滚动联动：滚到顶再上拉 → 拉高抽屉（Pointer + Touch 双路径） */
-      if (listWrap) {
+      /* 面板区手势联动（绑在 #panel 上，覆盖头部与列表）：
+         - 面板未全屏：向上滑 → 接管手势把面板拉向全屏（"想看更多就上滑"）
+         - 面板全屏：列表内容正常滚动；在列表顶部或头部再下滑 → 拉回地图态 */
+      if (panel) {
         var lt = null;
-        function lwStart(y) {
-          lt = { y0: y, dragging: false };
-        }
-        function lwMove(y, cancelable) {
+        function panStart(y) { lt = { y0: y, dragging: false }; }
+        function panMove(y, ev) {
           if (!lt) return;
           var dy = y - lt.y0;
+          var frac = sheetH() / window.innerHeight;
           if (!lt.dragging) {
-            /* 抽屉未到最高、且列表在顶部、且手指上拉 → 接管为抽屉拖动 */
-            var nearHigh = sheetH() / window.innerHeight > HIGH - 0.04;
-            if (!nearHigh && listWrap.scrollTop <= 0 && dy < -10) {
-              lt.dragging = true;
-              beginDrag(lt.y0);
-              if (panel) panel.classList.add('dragging');
-            } else return;
+            if (frac < 0.985) {
+              /* 非全屏：向上滑 = 把面板拉向全屏（下拉交还列表原生滚动） */
+              if (dy < -14) { lt.dragging = true; beginDrag(lt.y0); if (panel) panel.classList.add('dragging'); }
+              else return;
+            } else {
+              /* 全屏：只有滚到顶后的下拉才接管（列表中部下拉 = 正常滚动内容） */
+              if (dy > 14 && listWrap && listWrap.scrollTop <= 0) {
+                lt.dragging = true; beginDrag(lt.y0); if (panel) panel.classList.add('dragging');
+              } else return;
+            }
           }
-          if (cancelable) moveDrag(y);
+          if (lt.dragging && ev && ev.cancelable) ev.preventDefault();
+          if (lt.dragging) moveDrag(y);
         }
-        function lwEnd() {
-          if (lt && lt.dragging) endDrag();
-          lt = null;
-        }
-        function peDown(e) { lwStart(e.clientY); }
-        function peMove(e) {
-          /* pointer 按下时若已接管为拖动则阻止原生滚动 */
-          if (lt && lt.dragging && e.cancelable) e.preventDefault();
-          lwMove(e.clientY, true);
-        }
+        function panEnd() { if (lt && lt.dragging) endDrag(); lt = null; }
         if (window.PointerEvent) {
-          listWrap.addEventListener('pointerdown', peDown);
-          listWrap.addEventListener('pointermove', peMove, { passive: false });
-          listWrap.addEventListener('pointerup', lwEnd);
-          listWrap.addEventListener('pointercancel', lwEnd);
+          panel.addEventListener('pointerdown', function (e) { panStart(e.clientY); });
+          panel.addEventListener('pointermove', function (e) { panMove(e.clientY, e); }, { passive: false });
+          panel.addEventListener('pointerup', panEnd);
+          panel.addEventListener('pointercancel', panEnd);
         }
-        listWrap.addEventListener('touchstart', function (e) { lwStart(e.touches[0].clientY); }, { passive: true });
-        listWrap.addEventListener('touchmove', function (e) { lwMove(e.touches[0].clientY, true); }, { passive: false });
-        listWrap.addEventListener('touchend', lwEnd);
-        listWrap.addEventListener('touchcancel', lwEnd);
+        panel.addEventListener('touchstart', function (e) { panStart(e.touches[0].clientY); }, { passive: true });
+        panel.addEventListener('touchmove', function (e) { panMove(e.touches[0].clientY, e); }, { passive: false });
+        panel.addEventListener('touchend', panEnd);
+        panel.addEventListener('touchcancel', panEnd);
       }
     }
   }
